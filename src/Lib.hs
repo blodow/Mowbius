@@ -4,7 +4,7 @@ import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Interface.Pure.Game
 
-data Area = Area { areas :: [Path]
+data Field = Field { fields :: [Path]
                  , holes :: [Path]
                  }
 
@@ -20,7 +20,7 @@ data Keys = Keys { up :: Bool
                  , right :: Bool
                  }
 
-data World = World { area :: Area, bot :: Bot , keys :: Keys}
+data World = World { field :: Field, bot :: Bot , keys :: Keys}
  
 run = play (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray window
            60 -- fps
@@ -34,8 +34,8 @@ run = play (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray windo
 wInit :: World
 wInit = World a b none
  where
-  -- Area
-  a = Area [p1, p2] [h]
+  -- Field
+  a = Field [p1, p2] [h]
   p1 = [(-5.0, -5.0), (5.0, -5.0), (5.0, 5.0), (-5.0, 5.0)]
   p2 = translatePath (11,0) p1
   h = [(1.0, 1.0), (4.0, 4.0), (4.0, 1.0)]
@@ -79,12 +79,12 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld (World a b _) = pictures [ displayArea a, displayBot b ]
+displayWorld (World a b _) = pictures [ displayField a, displayBot b ]
 
-displayArea :: Area -> Picture
-displayArea Area {areas=as, holes=hs} = pictures [as', hs']
+displayField :: Field -> Picture
+displayField Field {fields=fs, holes=hs} = pictures [fs', hs']
  where
-  as' = Color red . pictures $ map lineLoop as
+  fs' = Color red . pictures $ map lineLoop fs
   hs' = Color green . pictures $ map lineLoop hs
 
 displayBot :: Bot -> Picture
@@ -118,8 +118,5 @@ setKey b KeyLeft ks = ks { left = b }
 setKey b KeyRight ks = ks { right = b } 
 setKey _ _ ks = ks
 
-enable :: SpecialKey -> Keys -> Keys
 enable = setKey True
-
-disable :: SpecialKey -> Keys -> Keys
 disable = setKey False
