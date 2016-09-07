@@ -5,8 +5,8 @@ import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Interface.Pure.Game
 
 data Field = Field { fields :: [Path]
-                 , holes :: [Path]
-                 }
+                   , holes :: [Path]
+                   }
 
 data Bot = Bot { pos :: Point
                , angle :: Float
@@ -32,10 +32,10 @@ run = play (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray windo
 -- constants
 
 wInit :: World
-wInit = World a b none
+wInit = World f b none
  where
   -- Field
-  a = Field [p1, p2] [h]
+  f = Field [p1, p2] [h]
   p1 = [(-5.0, -5.0), (5.0, -5.0), (5.0, 5.0), (-5.0, 5.0)]
   p2 = translatePath (11,0) p1
   h = [(1.0, 1.0), (4.0, 4.0), (4.0, 1.0)]
@@ -79,7 +79,7 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld (World a b _) = pictures [ displayField a, displayBot b ]
+displayWorld (World f b _) = pictures [ displayField f, displayBot b ]
 
 displayField :: Field -> Picture
 displayField Field {fields=fs, holes=hs} = pictures [fs', hs']
