@@ -1,8 +1,11 @@
 module Lib (run) where
 
+import Algebra.Clipper
+import Control.Monad.IO.Class
+import GHC.Int
 import Graphics.Gloss
+import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
-import Graphics.Gloss.Interface.Pure.Game
 
 data Field = Field { fields :: [Path]
                    , holes :: [Path]
@@ -22,12 +25,12 @@ data Keys = Keys { up :: Bool
 
 data World = World { field :: Field, bot :: Bot , keys :: Keys}
  
-run = play (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray window
-           60 -- fps
-           wInit -- initial world state
-           (Scale 20 20 . displayWorld) -- display function
-           handleEvent -- event handler
-           advance -- state update function
+run = playIO (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray window
+             60 -- fps
+             wInit -- initial world state
+             (return . Scale 20 20 . displayWorld) -- display function
+             handleEventIO -- event handler
+             advanceIO -- state update function
 
 -- constants
 
@@ -52,20 +55,26 @@ rotSpeed = 2
               
 -- functions
 
-handleEvent :: Event -> World -> World
-handleEvent (EventKey (SpecialKey k) Down _ _) w = w { keys = enable k $ keys w }
-handleEvent (EventKey (SpecialKey k) Up _ _) w = w { keys = disable k $ keys w }
-handleEvent _ w = w
+handleEventIO :: Event -> World -> IO World
+handleEventIO (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
+handleEventIO (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
+handleEventIO _ w = return w
 
-advance :: Float -> World -> World
-advance _ w@(World _ b k) = w { bot = go (step k) (rot k) b }
+advanceIO :: Float -> World -> IO World
+advanceIO _ w@(World f b k) = case (s, r) of
+ (0, 0) -> return w
+ _ -> do
+   f' <- mow f b
+   return w { field = f', bot = go s r b }
  where
   step (Keys True False _ _) = speed -- forwards
   step (Keys False True _ _) = -speed -- backwards
   step _ = 0
+  s = step k
   rot (Keys _ _ True False) = -rotSpeed -- left
   rot (Keys _ _ False True) = rotSpeed -- right
   rot _ = 0
+  r = rot k
 
 -- move robot by rotating r and taking a step with magniture t
 go :: Float -> Float -> Bot -> Bot
@@ -101,6 +110,32 @@ displayBot b = Scale 1 1 $ pictures [path', t $ r botp]
                   , Color white $ rectangleSolid w h
                   ]
 
+-- Mowing
+
+mow :: Field -> Bot -> IO Field
+mow f b = toPaths <$> clip ps bot 
+                  >>= \f' -> return f { fields = f' }
+ where
+  clip = execute ctDifference 
+  ps = Polygons $ map clipperPoly $ fields f
+  bot = Polygons $ [clipperPoly botFootPrint]
+  botFootPrint = transformPath (angle b) (pos b) [(-w, -h), (w, -h), (w, h), (-w, h)]
+  w = (wheelBase b) / 2.0
+  h = w / 3.0
+
+clipperPoly :: Path -> Polygon
+clipperPoly p = 
+  Algebra.Clipper.Polygon . flip map p $ \(x, y) -> IntPoint (floatToInt x) (floatToInt y)
+
+toPaths :: Polygons -> [Path]
+toPaths (Algebra.Clipper.Polygons ps) = map toPath ps
+
+toPath :: Polygon -> Path
+toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
+ where
+  x = intToFloat . pointX
+  y = intToFloat . pointY
+
 -- Helper functions
 
 translatePath :: Point -> Path -> Path
@@ -108,6 +143,20 @@ translatePath t = map $ translatePoint t
 
 translatePoint :: Point -> Point -> Point
 translatePoint (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+transformPath :: Float -> Point -> Path -> Path
+transformPath r t = map $ transformPoint r t
+
+transformPoint :: Float -> Point -> Point -> Point
+transformPoint r t = translatePoint t . rotateV (-rad)
+ where
+  rad = r / 180.0 * pi
+
+floatToInt :: Float -> GHC.Int.Int64
+floatToInt = round . (*) 100.0 -- 1 cm
+
+intToFloat :: GHC.Int.Int64 -> Float
+intToFloat i = (fromInteger $ toInteger i) / 100.0 -- 1 cm
 
 -- Key state handling
 
