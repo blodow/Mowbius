@@ -25,17 +25,21 @@ data Keys = Keys { up :: Bool
 
 data World = World { field :: Field, bot :: Bot , keys :: Keys}
  
-run = playIO (InWindow "uMow" (800, 600) (5, 5)) (greyN 0.2)  -- create gray window
+run = wInit >>= \wInit' -> 
+  playIO (InWindow "uMow" windowSize (5, 5)) (greyN 0.2)  -- create gray window
              60 -- fps
-             wInit -- initial world state
-             (return . Scale 20 20 . displayWorld) -- display function
+             wInit' -- initial world state
+             (return . displayWorld) -- display function
              handleEventIO -- event handler
              advanceIO -- state update function
 
 -- constants
 
-wInit :: World
-wInit = World f b none
+windowSize :: (Int, Int)
+windowSize = (800, 600)
+
+wInit :: IO World
+wInit = clipHoles f >>= \f' -> return $ World f' b none
  where
   -- Field
   f = Field [p1, p2] [h]
@@ -46,6 +50,14 @@ wInit = World f b none
   b = Bot (0.0, 0.0) 0.0 [] 0.3
   -- Keys
   none = Keys False False False False
+
+clipHoles :: Field -> IO Field
+clipHoles (Field f h) = toPaths <$> clip f' h'
+                          >>= \f'' -> return $ Field f'' h
+ where
+  clip = execute ctDifference 
+  f' = pathsToPolys f
+  h' = pathsToPolys h
 
 speed :: Float
 speed = 0.05
@@ -142,14 +154,17 @@ mow f b = toPaths <$> clip ps bot
                   >>= \f' -> return f { fields = f' }
  where
   clip = execute ctDifference 
-  ps = Polygons $ map clipperPoly $ fields f
-  bot = Polygons $ [clipperPoly botFootPrint]
+  ps = pathsToPolys $ fields f
+  bot = Polygons $ [pathToPoly botFootPrint]
   botFootPrint = transformPath (angle b) (pos b) [(-w, -h), (w, -h), (w, h), (-w, h)]
   w = (wheelBase b) / 2.0
   h = w / 3.0
 
-clipperPoly :: Path -> Polygon
-clipperPoly p = 
+pathsToPolys :: [Path] -> Polygons
+pathsToPolys = Polygons . map pathToPoly
+
+pathToPoly :: Path -> Polygon
+pathToPoly p = 
   Algebra.Clipper.Polygon . flip map p $ \(x, y) -> IntPoint (floatToInt x) (floatToInt y)
 
 toPaths :: Polygons -> [Path]
