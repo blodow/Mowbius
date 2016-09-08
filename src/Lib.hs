@@ -76,28 +76,46 @@ advanceIO _ w@(World f b k) = case (s, r) of
   rot _ = 0
   r = rot k
 
--- move robot by rotating r and taking a step with magniture t
+-- move robot by rotating r and taking a step with magnitude t
 go :: Float -> Float -> Bot -> Bot
 go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
  where
   r' = r + angle b
-  p = translatePoint (pos b) step
+  p = translatePoint step (pos b)
   step = rotateV (-rad) (0, t)
   rad = r' / 180.0 * pi
 
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld (World f b _) = pictures [ displayField f, displayBot b ]
+displayWorld w@(World f b _) = autoScaled w $ pictures [ displayField f, displayBot b ]
+
+autoScaled :: World -> Picture -> Picture
+autoScaled w = Translate tx ty . Scale s s 
+ where
+  s = 0.9 * minimum [sx, sy]
+  sx = ((fromInteger . toInteger . fst) windowSize) / width worldBounds
+  sy = ((fromInteger . toInteger . snd) windowSize) / height worldBounds
+  worldBounds = getBounds w
+  center (p, q) = (mulSV 0.5 (q - p)) + p  -- compute center between two points
+  c = center $ mapT (mulSV s) worldBounds -- scale worldbounds and get center
+  tx = - fst c
+  ty = - snd c
+
+
+  width :: (Point, Point) -> Float
+  width (p, q) = fst (q - p)
+  height :: (Point, Point) -> Float
+  height (p, q) = snd (q - p)
 
 displayField :: Field -> Picture
-displayField Field {fields=fs, holes=hs} = pictures [fs', hs']
+displayField Field {fields = fs, holes = hs} = pictures [fs', hs']
  where
   fs' = Color red . pictures $ map lineLoop fs
   hs' = Color green . pictures $ map lineLoop hs
 
 displayBot :: Bot -> Picture
-displayBot b = Scale 1 1 $ pictures [path', t $ r botp]
+displayBot b = pictures [path', t $ r botp]
  where
   path' = Color yellow . line $ path b
   t = Translate x y
@@ -108,7 +126,15 @@ displayBot b = Scale 1 1 $ pictures [path', t $ r botp]
   h = w / 3.0
   botp = Pictures [ Color blue $ thickCircle 0.1 w
                   , Color white $ rectangleSolid w h
+                  , Color white $ line [(0, 0), (0, 10*w)]
                   ]
+
+getBounds :: World -> (Point, Point)
+getBounds w = ((minimum xs, minimum ys), (maximum xs, maximum ys))
+ where
+  -- allPoints contains robot pose and all field vertices
+  allPoints = pos (bot w) : (concat . fields $ field w)
+  (xs, ys) = unzip allPoints
 
 -- Mowing
 
@@ -137,6 +163,9 @@ toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
   y = intToFloat . pointY
 
 -- Helper functions
+
+mapT :: (a -> b) -> (a, a) -> (b, b)
+mapT f (a1, a2) = (f a1, f a2)
 
 translatePath :: Point -> Path -> Path
 translatePath t = map $ translatePoint t
