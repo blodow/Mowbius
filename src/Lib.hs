@@ -82,8 +82,7 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
  where
   r' = r + angle b
   p = translatePoint step (pos b)
-  step = rotateV (-rad) (0, t)
-  rad = r' / 180.0 * pi
+  step = rotateV (-rad r') (0, t)
 
 -- Display functions
 
@@ -177,9 +176,10 @@ transformPath :: Float -> Point -> Path -> Path
 transformPath r t = map $ transformPoint r t
 
 transformPoint :: Float -> Point -> Point -> Point
-transformPoint r t = translatePoint t . rotateV (-rad)
- where
-  rad = r / 180.0 * pi
+transformPoint r t = translatePoint t . rotateV (-rad r)
+
+rad :: Float -> Float
+rad r = r / 180.0 * pi
 
 floatToInt :: Float -> GHC.Int.Int64
 floatToInt = round . (*) 100.0 -- 1 cm
