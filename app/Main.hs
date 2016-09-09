@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Mowbius
 
 main :: IO ()
 main = run

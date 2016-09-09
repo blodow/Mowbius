@@ -1,30 +1,13 @@
-module Lib (run) where
+module Mowbius (run) where
 
 import Algebra.Clipper
-import Control.Monad.IO.Class
-import GHC.Int
-import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 
-data Field = Field { fields :: [Path]
-                   , holes :: [Path]
-                   }
+import Mowbius.Conversion
+import Mowbius.Types
 
-data Bot = Bot { pos :: Point
-               , angle :: Float
-               , path :: Path
-               , wheelBase :: Float 
-               }
-
-data Keys = Keys { up :: Bool
-                 , down :: Bool
-                 , left :: Bool
-                 , right :: Bool
-                 }
-
-data World = World { field :: Field, bot :: Bot , keys :: Keys}
- 
+run :: IO ()
 run = wInit >>= \wInit' -> 
   playIO (InWindow "uMow" windowSize (5, 5)) (greyN 0.2)  -- create gray window
              60 -- fps
@@ -63,7 +46,7 @@ speed :: Float
 speed = 0.05
 
 rotSpeed :: Float
-rotSpeed = 2
+rotSpeed = 1
               
 -- functions
 
@@ -122,8 +105,8 @@ autoScaled w = Translate tx ty . Scale s s
 displayField :: Field -> Picture
 displayField Field {fields = fs, holes = hs} = pictures [fs', hs']
  where
-  fs' = Color red . pictures $ map lineLoop fs
-  hs' = Color green . pictures $ map lineLoop hs
+  fs' = Color green . pictures $ map lineLoop fs
+  hs' = Color red . pictures $ map lineLoop hs
 
 displayBot :: Bot -> Picture
 displayBot b = pictures [path', t $ r botp]
@@ -150,12 +133,12 @@ getBounds w = ((minimum xs, minimum ys), (maximum xs, maximum ys))
 -- Mowing
 
 mow :: Field -> Bot -> IO Field
-mow f b = toPaths <$> clip ps bot 
+mow f b = toPaths <$> clip ps bot' 
                   >>= \f' -> return f { fields = f' }
  where
   clip = execute ctDifference 
   ps = pathsToPolys $ fields f
-  bot = Polygons $ [pathToPoly botFootPrint]
+  bot' = Polygons $ [pathToPoly botFootPrint]
   botFootPrint = transformPath (angle b) (pos b) [(-w, -h), (w, -h), (w, h), (-w, h)]
   w = (wheelBase b) / 2.0
   h = w / 3.0
@@ -176,32 +159,6 @@ toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
   x = intToFloat . pointX
   y = intToFloat . pointY
 
--- Helper functions
-
-mapT :: (a -> b) -> (a, a) -> (b, b)
-mapT f (a1, a2) = (f a1, f a2)
-
-translatePath :: Point -> Path -> Path
-translatePath t = map $ translatePoint t
-
-translatePoint :: Point -> Point -> Point
-translatePoint (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
-
-transformPath :: Float -> Point -> Path -> Path
-transformPath r t = map $ transformPoint r t
-
-transformPoint :: Float -> Point -> Point -> Point
-transformPoint r t = translatePoint t . rotateV (-rad r)
-
-rad :: Float -> Float
-rad r = r / 180.0 * pi
-
-floatToInt :: Float -> GHC.Int.Int64
-floatToInt = round . (*) 100.0 -- 1 cm
-
-intToFloat :: GHC.Int.Int64 -> Float
-intToFloat i = (fromInteger $ toInteger i) / 100.0 -- 1 cm
-
 -- Key state handling
 
 setKey :: Bool -> SpecialKey -> Keys -> Keys
@@ -211,5 +168,7 @@ setKey b KeyLeft ks = ks { left = b }
 setKey b KeyRight ks = ks { right = b } 
 setKey _ _ ks = ks
 
+enable, disable :: SpecialKey -> Keys -> Keys
 enable = setKey True
 disable = setKey False
+
