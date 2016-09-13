@@ -1,4 +1,4 @@
-module Mowbius (run) where
+module Mowbius where
 
 import Algebra.Clipper
 import Control.Arrow hiding (left, right)
