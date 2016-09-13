@@ -2,6 +2,8 @@ module Mowbius (run) where
 
 import Algebra.Clipper
 import Control.Arrow hiding (left, right)
+import Data.List
+import Data.Ord (comparing)
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
@@ -151,7 +153,7 @@ getBounds w = ((minimum xs, minimum ys), (maximum xs, maximum ys))
 
 mow :: Field -> Bot -> IO Field
 mow f b = toPaths <$> clip ps bot' 
-                  >>= \f' -> return f { fields = f' }
+                  >>= \f' -> return f { fields = simplify f' }
  where
   clip = execute ctDifference 
   ps = pathsToPolys $ fields f
@@ -160,6 +162,26 @@ mow f b = toPaths <$> clip ps bot'
   w = (wheelBase b) / 2.0
   h = w / 3.0
 
+simplify :: [Path] -> [Path]
+simplify = map $ rdp 0.01 -- 1cm threshold
+ where
+  -- Ramer-Douglas-Peucker split-and-merge algorithm
+  rdp :: Float -> Path -> Path
+  rdp e p | length p <= 2 = p
+          | peak <= e     = [head p, last p]
+          | otherwise     = front ++ tail back
+        where
+          front = rdp e $ take (loc+1) p
+          back = rdp e $ drop loc p
+          (loc, peak) = peakDist (head p) (last p) p
+
+  peakDist :: Point -> Point -> Path -> (Int, Float)
+  peakDist _ _ [] = (-1, 0)
+  peakDist (ax, ay) (bx, by) ps =
+    maximumBy (comparing snd) . zip [1..] . flip map (tail $ init ps) $
+     \(cx, cy) -> let denom = sqrt((bx - ax)^2 + (by - ay)^2)
+                      term = bx*ay - by*ax
+                   in abs ((by-ay)*cx - (bx-ax)*cy + term) / denom
 
 -- Key state handling
 
