@@ -143,8 +143,9 @@ getBounds :: World -> (Point, Point)
 getBounds w = ((minimum xs, minimum ys), (maximum xs, maximum ys))
  where
   -- allPoints contains robot pose and all field vertices
-  allPoints = pos (bot w) : (concat . fields $ field w)
+  allPoints = pad (pos (bot w)) ++ (concat . fields $ field w)
   (xs, ys) = unzip allPoints
+  pad (x, y) = [(x-1,y-1), (x+1,y+1)]
 
 -- Mowing
 
