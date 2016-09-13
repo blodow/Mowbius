@@ -3,6 +3,7 @@ module Mowbius (run) where
 import Algebra.Clipper
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
+import Graphics.Gloss.Geometry.Angle
 
 import Mowbius.Conversion
 import Mowbius.Types
@@ -77,7 +78,7 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
  where
   r' = r + angle b
   p = translatePoint step (pos b)
-  step = rotateV (-rad r') (0, t)
+  step = rotateV (-degToRad r') (0, t)
 
 -- Display functions
 

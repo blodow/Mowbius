@@ -4,7 +4,6 @@ module Mowbius.Conversion
   , translatePoint
   , transformPath
   , transformPoint
-  , rad
   , floatToInt
   , intToFloat
   ) where
@@ -28,10 +27,7 @@ transformPath :: Float -> Point -> Path -> Path
 transformPath r t = map $ transformPoint r t
 
 transformPoint :: Float -> Point -> Point -> Point
-transformPoint r t = translatePoint t . rotateV (-rad r)
-
-rad :: Float -> Float
-rad r = r / 180.0 * pi
+transformPoint r t = translatePoint t . rotateV (-degToRad r)
 
 floatToInt :: Float -> GHC.Int.Int64
 floatToInt = round . (*) 100.0 -- 1 cm
