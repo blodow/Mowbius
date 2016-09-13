@@ -2,8 +2,8 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
+- clipper
 extra-deps:
 - gloss-1.10.2.3
 - gloss-rendering-1.10.3.3
-- clipper-0.0.1
 resolver: lts-6.14

@@ -165,7 +165,7 @@ getBounds w = ((minimum xs, minimum ys), (maximum xs, maximum ys))
 
 mow :: Field -> Bot -> IO Field
 mow f b = toPaths <$> clip ps bot' 
-                  >>= \f' -> return f { fields = simplify f' }
+                  >>= \f' -> return f { fields = simplifyPaths f' }
  where
   clip = execute ctDifference 
   ps = pathsToPolys $ fields f
@@ -174,8 +174,8 @@ mow f b = toPaths <$> clip ps bot'
   w = (wheelBase b) / 2.0
   h = w / 3.0
 
-simplify :: [Path] -> [Path]
-simplify = map $ rdp 0.01 -- 1cm threshold
+simplifyPaths :: [Path] -> [Path]
+simplifyPaths = map $ rdp 0.01 -- 1cm threshold
  where
   -- Ramer-Douglas-Peucker split-and-merge algorithm
   rdp :: Float -> Path -> Path
