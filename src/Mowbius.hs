@@ -1,15 +1,17 @@
 module Mowbius (run) where
 
 import Algebra.Clipper
+import Control.Arrow hiding (left, right)
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
+import System.Random
 
 import Mowbius.Conversion
 import Mowbius.Types
 
 run :: IO ()
-run = wInit >>= \wInit' -> 
+run = wInit >>= \wInit' ->
   playIO (InWindow "uMow" windowSize (5, 5)) (greyN 0.2)  -- create gray window
              60 -- fps
              wInit' -- initial world state
@@ -22,16 +24,29 @@ run = wInit >>= \wInit' ->
 windowSize :: (Int, Int)
 windowSize = (800, 600)
 
+randomFloatsRsIO :: (Float, Float) -> IO [Float]
+randomFloatsRsIO range = getStdRandom $ split >>> first (randomRs range)
+
+randPath :: IO Path
+randPath = do
+  as <- sort . take 10 <$> randomFloatsRsIO (0.0, 360.0)
+  rs <- take 10 <$> randomFloatsRsIO (2.5, 5.0)
+  return . map polarToCart $ zip as rs
+ where
+  polarToCart :: (Float, Float) -> (Float, Float)
+  polarToCart (a, r) = mapT (r *) (cos (degToRad a), sin (degToRad a))
+
 wInit :: IO World
-wInit = clipHoles f >>= \f' -> return $ World f' b none
+wInit = randPath >>= \p ->
+  clipHoles (f p) >>= \f' -> return $ World f' b none
  where
   -- Field
-  f = Field [p1, p2] [h]
-  p1 = [(-5.0, -5.0), (5.0, -5.0), (5.0, 5.0), (-5.0, 5.0)]
-  p2 = translatePath (11,0) p1
-  h = [(1.0, 1.0), (4.0, 4.0), (4.0, 1.0)]
+  f ps = Field [ps] [h]
+  -- p1 = [(-5.0, -5.0), (5.0, -5.0), (5.0, 5.0), (-5.0, 5.0)]
+  -- p2 = translatePath (11,0) p1
+  h = [] --(1.0, 1.0), (4.0, 4.0), (4.0, 1.0)]
   -- Bot
-  b = Bot (0.0, 0.0) 0.0 [] 0.3
+  b = Bot (5.0, 5.0) 0.0 [] 0.3
   -- Keys
   none = Keys False False False False
 

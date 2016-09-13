@@ -22,6 +22,7 @@ library
                      , gloss
                      , clipper
                      , transformers
+                     , random
   default-language:    Haskell2010
 
 executable Mowbius-exe
