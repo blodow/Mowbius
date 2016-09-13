@@ -10,6 +10,7 @@ import Graphics.Gloss.Geometry.Angle
 import System.Random
 
 import Mowbius.Conversion
+import Mowbius.Planner
 import Mowbius.Types
 
 run :: IO ()
@@ -101,7 +102,7 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld w@(World f b _) = autoScaled w $ pictures [ displayField f, displayBot b ]
+displayWorld w@(World f b _) = autoScaled w $ pictures [ displayField f, displayBot b, displayVertexEvents w ]
 
 autoScaled :: World -> Picture -> Picture
 autoScaled w = Translate tx ty . Scale s s 
@@ -119,6 +120,17 @@ autoScaled w = Translate tx ty . Scale s s
   width (p, q) = fst (q - p)
   height :: (Point, Point) -> Float
   height (p, q) = snd (q - p)
+
+displayVertexEvents :: World -> Picture
+displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fields f
+ where
+  displayVertexEvents' path = Pictures .  map draw $ zip (evs $ pathToPoly path) path
+  evs p = eventsForDirection (-angle b) p
+  draw :: (VertexEvent, Point) -> Picture
+  draw (In, (x, y)) = translate x y . Color green $ Circle 0.1
+  draw (Out, (x, y)) = translate x y . Color white $ Circle 0.1
+  --draw (Middle, (x, y)) = translate x y . Color blue $ Circle 1
+  draw (_, _) = blank
 
 displayField :: Field -> Picture
 displayField Field {fields = fs, holes = hs} = pictures [fs', hs']

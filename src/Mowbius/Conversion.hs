@@ -10,6 +10,7 @@ module Mowbius.Conversion
   , pathToPoly
   , toPaths
   , toPath
+  , toPoint
   ) where
 
 import Algebra.Clipper
@@ -56,4 +57,7 @@ toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
  where
   x = intToFloat . pointX
   y = intToFloat . pointY
+
+toPoint :: IntPoint -> Point
+toPoint p = mapT intToFloat (pointX p, pointY p)
 

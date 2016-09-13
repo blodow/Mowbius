@@ -18,6 +18,7 @@ library
   exposed-modules:     Mowbius
                      , Mowbius.Conversion
                      , Mowbius.Types
+                     , Mowbius.Planner
   build-depends:       base >= 4.7 && < 5
                      , gloss
                      , clipper
