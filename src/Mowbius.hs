@@ -144,21 +144,6 @@ mow f b = toPaths <$> clip ps bot'
   w = (wheelBase b) / 2.0
   h = w / 3.0
 
-pathsToPolys :: [Path] -> Polygons
-pathsToPolys = Polygons . map pathToPoly
-
-pathToPoly :: Path -> Polygon
-pathToPoly p = 
-  Algebra.Clipper.Polygon . flip map p $ \(x, y) -> IntPoint (floatToInt x) (floatToInt y)
-
-toPaths :: Polygons -> [Path]
-toPaths (Algebra.Clipper.Polygons ps) = map toPath ps
-
-toPath :: Polygon -> Path
-toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
- where
-  x = intToFloat . pointX
-  y = intToFloat . pointY
 
 -- Key state handling
 

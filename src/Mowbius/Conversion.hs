@@ -6,11 +6,17 @@ module Mowbius.Conversion
   , transformPoint
   , floatToInt
   , intToFloat
+  , pathsToPolys
+  , pathToPoly
+  , toPaths
+  , toPath
   ) where
 
+import Algebra.Clipper
 import GHC.Int
 import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
+import Graphics.Gloss.Geometry.Angle
 
 -- Helper functions
 
@@ -34,4 +40,20 @@ floatToInt = round . (*) 100.0 -- 1 cm
 
 intToFloat :: GHC.Int.Int64 -> Float
 intToFloat i = (fromInteger $ toInteger i) / 100.0 -- 1 cm
+
+pathsToPolys :: [Path] -> Polygons
+pathsToPolys = Polygons . map pathToPoly
+
+pathToPoly :: Path -> Polygon
+pathToPoly p = 
+  Algebra.Clipper.Polygon . flip map p $ \(x, y) -> IntPoint (floatToInt x) (floatToInt y)
+
+toPaths :: Polygons -> [Path]
+toPaths (Algebra.Clipper.Polygons ps) = map toPath ps
+
+toPath :: Polygon -> Path
+toPath (Algebra.Clipper.Polygon p) = map (\p' -> (x p', y p')) p
+ where
+  x = intToFloat . pointX
+  y = intToFloat . pointY
 
