@@ -23,5 +23,7 @@ data Keys = Keys { up :: Bool
                  , right :: Bool
                  }
 
-data World = World { field :: Field, bot :: Bot , keys :: Keys}
+data World = World { field :: Field
+                   , bot :: Bot
+                   , keys :: Keys}
 

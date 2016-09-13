@@ -67,6 +67,7 @@ rotSpeed = 1
 -- functions
 
 handleEventIO :: Event -> World -> IO World
+--handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = -- TODO: Quit ?
 handleEventIO (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
 handleEventIO (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
 handleEventIO _ w = return w
@@ -111,7 +112,6 @@ autoScaled w = Translate tx ty . Scale s s
   c = center $ mapT (mulSV s) worldBounds -- scale worldbounds and get center
   tx = - fst c
   ty = - snd c
-
 
   width :: (Point, Point) -> Float
   width (p, q) = fst (q - p)
