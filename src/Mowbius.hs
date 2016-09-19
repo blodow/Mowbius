@@ -102,7 +102,11 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld w@(World f b _) = autoScaled w $ pictures [ displayField f, displayBot b, displayVertexEvents w ]
+displayWorld w@(World f b _) = autoScaled w $ pictures [ displayField f
+                                                       , displayBot b
+                                                       , displayVertexEvents w 
+                                                       , displayDecomposition w 
+                                                       ]
 
 autoScaled :: World -> Picture -> Picture
 autoScaled w = Translate tx ty . Scale s s 
@@ -134,6 +138,13 @@ displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fiel
   --draw (Middle, (x, y)) = translate x y . Color blue $ Circle 1
   draw (_, _) = blank
   text = Scale 0.005 0.005 . Text
+
+displayDecomposition :: World -> Picture
+displayDecomposition w@(World f b _) = Pictures . map (draw . decomp) $ fields f
+ where
+  decomp path = toPaths . graphToPolys . splitPolygon (-angle b) $ pathToPoly path
+  draw :: [Path] -> Picture
+  draw p = Color cyan . pictures $ map lineLoop p
 
 displayField :: Field -> Picture
 displayField Field {fields = fs, holes = hs} = pictures [fs', hs']
