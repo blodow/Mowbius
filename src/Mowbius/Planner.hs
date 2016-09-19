@@ -1,7 +1,9 @@
 module Mowbius.Planner where
 
 import Algebra.Clipper
+import Data.Fixed
 import Graphics.Gloss.Geometry.Angle
+import Graphics.Gloss.Data.Vector
 
 import Mowbius.Conversion
 
@@ -31,23 +33,24 @@ distances angle (Polygon p) = map lineDistance p
 markEvents :: Polygon -> [Float] -> [VertexEvent]
 markEvents p d = visitVertices p d mkEvent
  where
-  mkEvent ((pre, apre), v, (post, apost))
-    | (v < pre) && (v < post) && apost < apre = InHull
+  mkEvent (pre, (v, a), post)
+    | (v < pre) && (v < post) && a < 0 = InHull
     | (v < pre) && (v < post) = InHole
-    | (v > pre) && (v > post) && apost < apre = OutHull
+    | (v > pre) && (v > post) && a < 0 = OutHull
     | (v > pre) && (v > post) = OutHole
     | otherwise               = Middle
 
-  visitVertices :: Polygon -> [Float] -> (((Float, Float), Float, (Float, Float)) -> a) -> [a]
+  visitVertices :: Polygon -> [Float] -> ((Float, (Float, Float), Float) -> a) -> [a]
   visitVertices _ [] _ = []
   visitVertices _ [_] _ = []
   visitVertices p ds f =
-    map f $ zip3 (zip (leftsOf ds) apres) ds (zip (rightsOf ds) aposts)
+    map f $ zip3 (leftsOf ds) (zip ds angles) (rightsOf ds)
 
   path = toPath p
-  apres = map angle . zip path $ leftsOf path
-  aposts = map angle . zip path $ rightsOf path
-  angle ((x1,y1), (x2,y2)) = atan2 (y2-y1) (x2-x1)
+  angles = map angle pointTuples
+  pointTuples = zip3 path (leftsOf path) (rightsOf path)
+  angle ((ax,ay), (bx,by), (cx, cy)) = normalize $ (atan2 (ay-by) (ax-bx)) - (atan2 (cy-by) (cx-bx))
+  normalize = ((-) pi) . (`mod'` (2 * pi)) . ((+) pi) -- normalize to [-pi:pi)
 
 rotate :: Int -> [a] -> [a]
 rotate _ [] = []
