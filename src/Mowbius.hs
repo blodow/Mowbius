@@ -127,10 +127,13 @@ displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fiel
   displayVertexEvents' path = Pictures .  map draw $ zip (evs $ pathToPoly path) path
   evs p = eventsForDirection (-angle b) p
   draw :: (VertexEvent, Point) -> Picture
-  draw (In, (x, y)) = translate x y . Color green $ Circle 0.1
-  draw (Out, (x, y)) = translate x y . Color white $ Circle 0.1
+  draw (InHull, (x, y)) = translate x y . Color green $ text "Iu"
+  draw (InHole, (x, y)) = translate x y . Color white $ text "Io"
+  draw (OutHull, (x, y)) = translate x y . Color red $ text "Ou"
+  draw (OutHole, (x, y)) = translate x y . Color cyan $ text "Oo"
   --draw (Middle, (x, y)) = translate x y . Color blue $ Circle 1
   draw (_, _) = blank
+  text = Scale 0.005 0.005 . Text
 
 displayField :: Field -> Picture
 displayField Field {fields = fs, holes = hs} = pictures [fs', hs']

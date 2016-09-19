@@ -5,8 +5,10 @@ import Graphics.Gloss.Geometry.Angle
 
 import Mowbius.Conversion
 
-data VertexEvent = In
-                 | Out
+data VertexEvent = InHull
+                 | InHole
+                 | OutHull
+                 | OutHole
                  | Middle
                  deriving (Eq, Show)
 
@@ -14,7 +16,7 @@ decompose :: Polygon -> Float -> IO Polygons
 decompose = undefined
 
 eventsForDirection :: Float -> Polygon -> [VertexEvent]
-eventsForDirection a p = markEvents $ distances a p
+eventsForDirection a p = markEvents p $ distances a p
 
 distances :: Float -> Polygon -> [Float]
 distances angle (Polygon p) = map lineDistance p
@@ -26,18 +28,26 @@ distances angle (Polygon p) = map lineDistance p
   b = cos $ degToRad angle
   c = 0.0
 
-markEvents :: [Float] -> [VertexEvent]
-markEvents d = visitVertices d mkEvent
+markEvents :: Polygon -> [Float] -> [VertexEvent]
+markEvents p d = visitVertices p d mkEvent
  where
-  mkEvent (pre, v, post)
-    | (v > pre) && (v > post) = Out
-    | (v < pre) && (v < post) = In
+  mkEvent ((pre, apre), v, (post, apost))
+    | (v < pre) && (v < post) && apost < apre = InHull
+    | (v < pre) && (v < post) = InHole
+    | (v > pre) && (v > post) && apost < apre = OutHull
+    | (v > pre) && (v > post) = OutHole
     | otherwise               = Middle
 
-visitVertices :: [Float] -> ((Float, Float, Float) -> a) -> [a]
-visitVertices [] _ = []
-visitVertices [_] _ = []
-visitVertices ds f = map f $ zip3 (rotate (-1) ds) ds (rotate 1 ds)
+  visitVertices :: Polygon -> [Float] -> (((Float, Float), Float, (Float, Float)) -> a) -> [a]
+  visitVertices _ [] _ = []
+  visitVertices _ [_] _ = []
+  visitVertices p ds f =
+    map f $ zip3 (zip (leftsOf ds) apres) ds (zip (rightsOf ds) aposts)
+
+  path = toPath p
+  apres = map angle . zip path $ leftsOf path
+  aposts = map angle . zip path $ rightsOf path
+  angle ((x1,y1), (x2,y2)) = atan2 (y2-y1) (x2-x1)
 
 rotate :: Int -> [a] -> [a]
 rotate _ [] = []
@@ -46,5 +56,8 @@ rotate n xs = zipWith const (drop k $ cycle xs) xs
    k | n >= 0 = length xs - n
      | n < 0  = -n
 
+leftsOf, rightsOf :: [a] -> [a]
+leftsOf = rotate (-1)
+rightsOf = rotate 1
 
 
