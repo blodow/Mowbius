@@ -64,17 +64,19 @@ rightsOf = rotate 1
 
 -- #############################################################################
 
-type PointTag = Int
+data PointTag = Original Int
+              | Created Int
+              | NoTag
 type PolygonTag = Int
 type NodeTag = Int
 
-data TaggedPoint = TaggedPoint { tptTag :: Maybe PointTag
+data TaggedPoint = TaggedPoint { tptTag :: PointTag
                                , tptDist :: Float
                                , tptPoint :: Point
                                }
 
-mkPt :: PointTag -> Float -> Point -> TaggedPoint
-mkPt t d p = TaggedPoint (Just t) d p
+mkOrigPt :: Int -> Float -> Point -> TaggedPoint
+mkOrigPt i d p = TaggedPoint (Original i) d p
 
 data TaggedPolygon = TaggedPolygon { tpyTag :: !PolygonTag
                                    , tpyPoints :: [Point]
@@ -97,22 +99,30 @@ instance Eq Cell where
 type Cells = [Cell]
 
 data Graph = Graph { grOrig :: [TaggedPoint]
+                   , grCreated :: [TaggedPoint]
                    , grNodes :: [TaggedPolygon]
                    , grEdges :: [GraphEdge]
                    , grCurTag :: !PolygonTag
                    , grOpenCells :: Cells
                    }
 emptyGraph :: Polygon -> [Float] -> Graph
-emptyGraph p ds = Graph (map (uncurry3 mkPt) $ zip3 [0..] ds (toPath p)) [] [] 0 []
+emptyGraph p ds = Graph (map (uncurry3 mkOrigPt) $ zip3 [0..] ds (toPath p)) [] [] [] 0 []
 
 uncurry3 :: (a->b->c->d) -> (a,b,c) -> d
 uncurry3 f (a,b,c) = f a b c
 
-leftEdgeP :: [Point] -> PointTag -> (Point, Point)
-leftEdgeP p t = (zip p (leftsOf p)) !! t
+origEdge :: Graph -> PointTag -> ([a]->[a]) -> (TaggedPoint, TaggedPoint)
+origEdge Graph { grOrig = os } (Original i) sel = (zip os (sel os)) !! i
+origEdge _ _ = undefined
 
-rightEdgeP :: [Point] -> PointTag -> (Point, Point)
-rightEdgeP p t = (zip p (rightsOf p)) !! t
+findEdge :: Graph -> PointTag -> ((a,a)->a) -> (TaggedPoint, TaggedPoint)
+findEdge Graph { cell } t sel
+
+--leftEdgeP :: Graph -> PointTag -> (TaggedPoint, TaggedPoint)
+--leftEdgeP p t = (zip p (leftsOf p)) !! t
+--
+--rightEdgeP :: [Point] -> PointTag -> (Point, Point)
+--rightEdgeP p t = (zip p (rightsOf p)) !! t
 
 decompose :: Float -> Polygon -> Graph
 decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
@@ -122,9 +132,6 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
   sortedPoints = sortBy (comparing thrd) $ zip3 events [0..] ds
   thrd (_, _, c) = c
   -- dropThird (a, b, _) = (a, b)
-
-  leftEdge = leftEdgeP $ toPath p
-  rightEdge = rightEdgeP $ toPath p
 
   inEdges :: [TaggedPoint] -> PointTag -> [(Point, Point)] -> Bool
   inEdges pts t es = let t' = getPointWithTag pts t in any (cmp t' . snd) es
@@ -154,13 +161,13 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
     :: Graph -> PointTag -> Graph
 
   create g t = let tag = grCurTag g + 1 in
-    g { grOpenCells = Cell tag [leftEdge t] [rightEdge t] : grOpenCells g
+    g { grOpenCells = Cell tag [origEdge g t leftsOf] [origEdge g t rightsOf] : grOpenCells g
       , grCurTag = tag }
 
   update g t = g { grOpenCells = map upd (grOpenCells g) }
    where
     upd :: Cell -> Cell
-    upd c@Cell { ceLeft  = l } | inEs t l = c { ceLeft  = leftEdge  t : l }
+    upd c@Cell { ceLeft  = f : l } | f == t  inEs t l = c { ceLeft  = leftEdge  t : l }
     upd c@Cell { ceRight = r } | inEs t r = c { ceRight = rightEdge t : r }
     upd c = c
     inEs = inEdges (grOrig g)
