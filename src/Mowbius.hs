@@ -135,7 +135,7 @@ displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fiel
   draw (InHole, (x, y)) = translate x y . Color white $ text "Io"
   draw (OutHull, (x, y)) = translate x y . Color red $ text "Ou"
   draw (OutHole, (x, y)) = translate x y . Color cyan $ text "Oo"
-  --draw (Middle, (x, y)) = translate x y . Color blue $ Circle 1
+  draw (Middle, (x, y)) = translate x y . Color (greyN 0.9) $ text "m"
   draw (_, _) = blank
   text = Scale 0.005 0.005 . Text
 
