@@ -26,7 +26,7 @@ distances angle (Polygon p) = map lineDistance p
  where
   lineDistance :: IntPoint -> Float
   lineDistance pt = let (x, y) = toPoint pt in
-    ( a * x + b * y  + c ) / sqrt ( a * a + b * b ) 
+    ( a * x + b * y + c ) / sqrt ( a * a + b * b ) 
   a = negate . sin $ degToRad angle
   b = cos $ degToRad angle
   c = 0.0
@@ -35,10 +35,8 @@ markEvents :: Polygon -> [Float] -> [VertexEvent]
 markEvents p d = visitVertices p d mkEvent
  where
   mkEvent (pre, (v, a), post)
-    | (v < pre) && (v < post) && a < 0 = InHull
-    | (v < pre) && (v < post) = InHole
-    | (v > pre) && (v > post) && a < 0 = OutHull
-    | (v > pre) && (v > post) = OutHole
+    | (v < pre) && (v < post) = if a < 0 then InHull  else InHole
+    | (v > pre) && (v > post) = if a < 0 then OutHull else OutHole
     | otherwise               = Middle
 
   visitVertices :: Polygon -> [Float] -> ((Float, (Float, Float), Float) -> a) -> [a]
@@ -76,9 +74,6 @@ data TaggedPoint = TaggedPoint { tptTag :: Maybe PointTag
 
 mkPt :: PointTag -> Point -> TaggedPoint
 mkPt t p = TaggedPoint (Just t) p
-
-mkFreePt :: Point -> TaggedPoint
-mkFreePt = TaggedPoint Nothing
 
 data TaggedPolygon = TaggedPolygon { tpyTag :: PolygonTag
                                    , tpyPoints :: [Point]
@@ -180,9 +175,4 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p) sortedPoints
 
   join g _ = g
 
-graphToPolys :: Graph -> Polygons
-graphToPolys g = Polygons $ map (toPolygon) $ grNodes g
- where
-  toPolygon :: TaggedPolygon -> Polygon
-  toPolygon = pathToPoly . tpyPoints
 
