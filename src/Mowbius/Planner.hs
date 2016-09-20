@@ -75,7 +75,7 @@ data TaggedPoint = TaggedPoint { tptTag :: Maybe PointTag
 mkPt :: PointTag -> Point -> TaggedPoint
 mkPt t p = TaggedPoint (Just t) p
 
-data TaggedPolygon = TaggedPolygon { tpyTag :: PolygonTag
+data TaggedPolygon = TaggedPolygon { tpyTag :: !PolygonTag
                                    , tpyPoints :: [Point]
                                    }
 
@@ -87,7 +87,7 @@ instance Eq TaggedPolygon where
 instance Eq TaggedPoint where
   TaggedPoint tag _ == TaggedPoint tag' _ = tag == tag'
 
-data Cell = Cell { ceIndex :: PolygonTag
+data Cell = Cell { ceIndex :: !PolygonTag
                  , ceLeft :: [(Point, Point)]
                  , ceRight :: [(Point, Point)]
                  }
@@ -98,7 +98,7 @@ type Cells = [Cell]
 data Graph = Graph { grOrig :: [TaggedPoint]
                    , grNodes :: [TaggedPolygon]
                    , grEdges :: [GraphEdge]
-                   , grCurTag :: PolygonTag
+                   , grCurTag :: !PolygonTag
                    , grOpenCells :: Cells
                    }
 emptyGraph :: Polygon -> Graph
