@@ -119,9 +119,9 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
  where
   ds = distances angle p
   events = markEvents p ds
-  sortedPoints = map dropThird . sortBy (comparing thrd) $ zip3 events [0..] ds
+  sortedPoints = sortBy (comparing thrd) $ zip3 events [0..] ds
   thrd (_, _, c) = c
-  dropThird (a, b, _) = (a, b)
+  -- dropThird (a, b, _) = (a, b)
 
   leftEdge = leftEdgeP $ toPath p
   rightEdge = rightEdgeP $ toPath p
@@ -130,6 +130,10 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
   inEdges pts t es = let t' = getPointWithTag pts t in any (cmp t' . snd) es
   cmp :: TaggedPoint -> Point -> Bool
   cmp (TaggedPoint _ _ p1) p2 = abs (magV (p2-p1)) < 0.001
+  inBothEdges g t (Cell _ es1 es2) = (inEdges (grOrig g) t es1) && (inEdges (grOrig g) t es2)
+  inEitherEdges g t (Cell _ es1 es2) = (inEdges (grOrig g) t es1) || (inEdges (grOrig g) t es2)
+  inLeftEdges g t (Cell _ ls _) = inEdges (grOrig g) t ls
+  inRightEdges g t (Cell _ _ rs) = inEdges (grOrig g) t rs
 
   getPointWithTag :: [TaggedPoint] -> PointTag -> TaggedPoint
   getPointWithTag pts t = case dropWhile (not . sameTag t) pts of
@@ -139,37 +143,36 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
   sameTag t1 (TaggedPoint (Just t2) _ _) = t1 == t2
   sameTag _ _ = True
 
-  walk :: Graph -> (VertexEvent, PointTag) -> Graph
-  walk g (InHull, t) = create g t
-  walk g (InHole, t) = split g t
-  walk g (OutHull, t) = close g t
-  walk g (OutHole, t) = join g t
-  walk g (Middle, t) = update g t
+  walk :: Graph -> (VertexEvent, PointTag, Float) -> Graph
+  walk g (InHull, t, d) = create g t
+  walk g (InHole, t, d) = split g t
+  walk g (OutHull, t, d) = close g t
+  walk g (OutHole, t, d) = join g t d
+  walk g (Middle, t, d) = update g t
 
-  create, update, close, split, join
+  create, update, close, split
     :: Graph -> PointTag -> Graph
 
   create g t = let tag = grCurTag g + 1 in
     g { grOpenCells = Cell tag [leftEdge t] [rightEdge t] : grOpenCells g
-      , grCurTag = tag}
+      , grCurTag = tag }
 
   update g t = g { grOpenCells = map upd (grOpenCells g) }
    where
     upd :: Cell -> Cell
-    upd c@Cell { ceLeft = l } | inEs t l = c { ceLeft = leftEdge t : l }
+    upd c@Cell { ceLeft  = l } | inEs t l = c { ceLeft  = leftEdge  t : l }
     upd c@Cell { ceRight = r } | inEs t r = c { ceRight = rightEdge t : r }
     upd c = c
     inEs = inEdges (grOrig g)
 
   close g t = g { grOpenCells = delete c (grOpenCells g)
-                , grNodes = toNode c pt'  : grNodes g
+                , grNodes = toNode c pt' : grNodes g
                 }
    where
-    c = case filter (inBothEdges t) (grOpenCells g) of
-          [] -> Cell 0 [] [] 
+    c = case filter (inBothEdges g t) (grOpenCells g) of
+          [] -> Cell 666 [] [] 
           l  -> head l
     pt' = getPointWithTag (grOrig g) t
-    inBothEdges t (Cell _ es1 es2) = (inEdges (grOrig g) t es1) && (inEdges (grOrig g) t es2)
 
   toNode :: Cell -> TaggedPoint -> TaggedPolygon
   toNode (Cell t' ls rs) (TaggedPoint _ _ p) = TaggedPolygon t' $ p :
@@ -177,6 +180,7 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
 
   split g _ = g
 
-  join g _ = g
+  join :: Graph -> PointTag -> Float -> Graph
+  join g t d = g { grOpenCells = c : (grOpenCells g \\ [a, b])
 
 
