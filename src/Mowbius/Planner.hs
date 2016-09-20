@@ -182,5 +182,35 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
 
   join :: Graph -> PointTag -> Float -> Graph
   join g t d = g { grOpenCells = c : (grOpenCells g \\ [a, b])
+                 , grCurTag = tag
+                 , grNodes = toNode a pt' : toNode b pt' : grNodes g }
+   where
+
+    (a, b, c) = let ls = filter (inLeftEdges g t) (grOpenCells g)
+                    rs = filter (inRightEdges g t) (grOpenCells g) in
+                    case (ls, rs) of
+                      ([l], [r]) -> doit l r
+                      otherwise -> undefined
+    tag = grCurTag g + 1
+
+    doit :: Cell -> Cell -> (Cell, Cell, Cell)
+    doit l r = let edgeL = selectE $ ceLeft r
+                   edgeR = selectE $ ceRight l
+                   (edgeLFront, edgeLBack) = splitEdge d edgeL
+                   (edgeRFront, edgeRBack) = splitEdge d edgeR in
+                  ( r { ceLeft = replaceE edgeL edgeLFront (ceLeft r) }
+                  , l { ceRight = replaceE edgeR edgeRFront (ceRight l) }
+                  , Cell tag [edgeLBack] [edgeRBack]
+                  )
+    replaceE old new = map $ \e -> if e == old then new else e
+    --selectE :: [(Point, Point)] -> (Point, Point)
+    selectE es = case filter (cmp pt' . snd) es of
+                   [] -> ((0,0),(0,0))
+                   l -> head l
+    splitEdge :: Float -> (Point, Point) -> ((Point, Point), (Point, Point))
+    splitEdge _ e = (e, e)
+
+    pt' = getPointWithTag (grOrig g) t
+
 
 
