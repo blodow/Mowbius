@@ -70,7 +70,7 @@ rotSpeed = 1
 -- functions
 
 handleEventIO :: Event -> World -> IO World
---handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = -- TODO: Quit ?
+handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = undefined
 handleEventIO (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
 handleEventIO (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
 handleEventIO _ w = return w
