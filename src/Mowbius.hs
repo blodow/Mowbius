@@ -131,20 +131,34 @@ displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fiel
   displayVertexEvents' path = Pictures .  map draw $ zip (evs $ pathToPoly path) path
   evs p = eventsForDirection (-angle b) p
   draw :: (VertexEvent, Point) -> Picture
-  draw (InHull, (x, y)) = translate x y . Color green $ text "Iu"
-  draw (InHole, (x, y)) = translate x y . Color white $ text "Io"
-  draw (OutHull, (x, y)) = translate x y . Color red $ text "Ou"
-  draw (OutHole, (x, y)) = translate x y . Color cyan $ text "Oo"
-  draw (Middle, (x, y)) = translate x y . Color (greyN 0.9) $ text "m"
+  draw (InHull, (x, y)) = translate x y . Color green $ sText "Iu"
+  draw (InHole, (x, y)) = translate x y . Color white $ sText "Io"
+  draw (OutHull, (x, y)) = translate x y . Color red $ sText "Ou"
+  draw (OutHole, (x, y)) = translate x y . Color cyan $ sText "Oo"
+  draw (Middle, (x, y)) = translate x y . Color (greyN 0.9) $ sText "m"
   draw (_, _) = blank
-  text = Scale 0.005 0.005 . Text
+
+sText :: String -> Picture
+sText = Scale 0.005 0.005 . Text
 
 displayDecomposition :: World -> Picture
 displayDecomposition w@(World f b _) = Pictures . map (draw . decomp) $ fields f
  where
-  decomp path = toPaths . graphToPolys . decompose (-angle b) $ pathToPoly path
-  draw :: [Path] -> Picture
-  draw p = Color cyan . pictures $ map lineLoop p
+  decomp path = decompose (-angle b) $ pathToPoly path
+  draw :: Graph -> Picture
+  draw g = Pictures $ polys (grNodes g) ++ tags (grNodes g) ++ edges
+
+  tags :: [TaggedPolygon] -> [Picture]
+  tags = map (\tp -> uncurry translate (centroid $ tpyPoints tp) . Color yellow . sText . show $ tpyTag tp)
+  centroid :: [Point] -> Point
+  centroid [] = (0, 0)
+  centroid ts = dividePt (sum ts) (genericLength ts)
+  dividePt (x,y) l = (x/l, y/l)
+
+  edges = []
+
+  polys :: [TaggedPolygon] -> [Picture]
+  polys = map ((Color cyan) . lineLoop . tpyPoints)
 
 displayField :: Field -> Picture
 displayField Field {fields = fs, holes = hs} = pictures [fs', hs']
