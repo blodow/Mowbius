@@ -69,11 +69,12 @@ type PolygonTag = Int
 type NodeTag = Int
 
 data TaggedPoint = TaggedPoint { tptTag :: Maybe PointTag
+                               , tptDist :: Float
                                , tptPoint :: Point
                                }
 
-mkPt :: PointTag -> Point -> TaggedPoint
-mkPt t p = TaggedPoint (Just t) p
+mkPt :: PointTag -> Float -> Point -> TaggedPoint
+mkPt t d p = TaggedPoint (Just t) d p
 
 data TaggedPolygon = TaggedPolygon { tpyTag :: !PolygonTag
                                    , tpyPoints :: [Point]
@@ -85,7 +86,7 @@ instance Eq TaggedPolygon where
   TaggedPolygon tag _ == TaggedPolygon tag' _ = tag == tag'
 
 instance Eq TaggedPoint where
-  TaggedPoint tag _ == TaggedPoint tag' _ = tag == tag'
+  TaggedPoint tag _ _ == TaggedPoint tag' _ _ = tag == tag'
 
 data Cell = Cell { ceIndex :: !PolygonTag
                  , ceLeft :: [(Point, Point)]
@@ -101,8 +102,11 @@ data Graph = Graph { grOrig :: [TaggedPoint]
                    , grCurTag :: !PolygonTag
                    , grOpenCells :: Cells
                    }
-emptyGraph :: Polygon -> Graph
-emptyGraph p = Graph (map (uncurry mkPt) $ zip [0..] (toPath p)) [] [] 0 []
+emptyGraph :: Polygon -> [Float] -> Graph
+emptyGraph p ds = Graph (map (uncurry3 mkPt) $ zip3 [0..] ds (toPath p)) [] [] 0 []
+
+uncurry3 :: (a->b->c->d) -> (a,b,c) -> d
+uncurry3 f (a,b,c) = f a b c
 
 leftEdgeP :: [Point] -> PointTag -> (Point, Point)
 leftEdgeP p t = (zip p (leftsOf p)) !! t
@@ -111,7 +115,7 @@ rightEdgeP :: [Point] -> PointTag -> (Point, Point)
 rightEdgeP p t = (zip p (rightsOf p)) !! t
 
 decompose :: Float -> Polygon -> Graph
-decompose angle p@(Polygon ps) = foldl walk (emptyGraph p) sortedPoints
+decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
  where
   ds = distances angle p
   events = markEvents p ds
@@ -125,14 +129,14 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p) sortedPoints
   inEdges :: [TaggedPoint] -> PointTag -> [(Point, Point)] -> Bool
   inEdges pts t es = let t' = getPointWithTag pts t in any (cmp t' . snd) es
   cmp :: TaggedPoint -> Point -> Bool
-  cmp (TaggedPoint _ p1) p2 = abs (magV (p2-p1)) < 0.001
+  cmp (TaggedPoint _ _ p1) p2 = abs (magV (p2-p1)) < 0.001
 
   getPointWithTag :: [TaggedPoint] -> PointTag -> TaggedPoint
   getPointWithTag pts t = case dropWhile (not . sameTag t) pts of
-               [] -> TaggedPoint Nothing (0,0)
+               [] -> TaggedPoint Nothing 0 (0,0)
                l  -> head l
   sameTag :: PointTag -> TaggedPoint -> Bool
-  sameTag t1 (TaggedPoint (Just t2) _) = t1 == t2
+  sameTag t1 (TaggedPoint (Just t2) _ _) = t1 == t2
   sameTag _ _ = True
 
   walk :: Graph -> (VertexEvent, PointTag) -> Graph
@@ -167,9 +171,9 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p) sortedPoints
     pt' = getPointWithTag (grOrig g) t
     inBothEdges t (Cell _ es1 es2) = (inEdges (grOrig g) t es1) && (inEdges (grOrig g) t es2)
 
-    toNode :: Cell -> TaggedPoint -> TaggedPolygon
-    toNode (Cell t ls rs) (TaggedPoint _ p) = TaggedPolygon t $ p :
-      (map fst ls) ++ (map fst (reverse rs))
+  toNode :: Cell -> TaggedPoint -> TaggedPolygon
+  toNode (Cell t' ls rs) (TaggedPoint _ _ p) = TaggedPolygon t' $ p :
+    (map fst ls) ++ (map fst (reverse rs))
 
   split g _ = g
 
