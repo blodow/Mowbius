@@ -8,6 +8,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
 import System.Random
+import Text.Show.Pretty
 
 import Mowbius.Conversion
 import Mowbius.Planner
@@ -41,7 +42,7 @@ randPath = do
 
 wInit :: IO World
 wInit = randPath >>= \p ->
-  clipHoles (f p) >>= \f' -> return $ World f' b none
+  clipHoles (f p) >>= \f' -> return $ World f' b none []
  where
   -- Field
   f ps = Field [ps] [h]
@@ -70,18 +71,21 @@ rotSpeed = 1
 -- functions
 
 handleEventIO :: Event -> World -> IO World
-handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = undefined
+handleEventIO (EventKey (SpecialKey KeyF1) Down _ _) w = pPrint (decompositions w) >> return w
+handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = error "ESC pressed."
 handleEventIO (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
 handleEventIO (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
 handleEventIO _ w = return w
 
 advanceIO :: Float -> World -> IO World
-advanceIO _ w@(World f b k) = case (s, r) of
+advanceIO _ w@(World f b k g) = case (s, r) of
  (0, 0) -> return w
  _ -> do
    f' <- mow f b
-   return w { field = f', bot = go s r b }
+   return w { field = f', bot = bot', decompositions = map decomp $ fields f }
  where
+  bot' = go s r b
+  decomp path = decompose (-angle bot') $ pathToPoly path
   step (Keys True False _ _) = speed -- forwards
   step (Keys False True _ _) = -speed -- backwards
   step _ = 0
@@ -102,7 +106,7 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 -- Display functions
 
 displayWorld :: World -> Picture
-displayWorld w@(World f b _) = autoScaled w $ pictures [ displayBot b
+displayWorld w@(World f b _ _) = autoScaled w $ pictures [ displayBot b
                                                        --, displayField f
                                                        , displayVertexEvents w 
                                                        , displayDecomposition w 
@@ -126,7 +130,7 @@ autoScaled w = Translate tx ty . Scale s s
   height (p, q) = snd (q - p)
 
 displayVertexEvents :: World -> Picture
-displayVertexEvents w@(World f b _) = Pictures . map displayVertexEvents' $ fields f
+displayVertexEvents w@(World f b _ _) = Pictures . map displayVertexEvents' $ fields f
  where
   displayVertexEvents' path = Pictures .  map draw $ zip (evs $ pathToPoly path) path
   evs p = eventsForDirection (-angle b) p
@@ -142,9 +146,8 @@ sText :: String -> Picture
 sText = Scale 0.005 0.005 . Text
 
 displayDecomposition :: World -> Picture
-displayDecomposition w@(World f b _) = Pictures . map (draw . decomp) $ fields f
+displayDecomposition w@(World f b _ ds) = Pictures $ map draw ds
  where
-  decomp path = decompose (-angle b) $ pathToPoly path
   draw :: Graph -> Picture
   draw g = Pictures $ polys (grNodes g) ++ tags (grNodes g) ++ edges
 

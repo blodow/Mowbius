@@ -6,6 +6,7 @@ module Mowbius.Types
   ) where
 
 import Graphics.Gloss
+import Mowbius.Planner
 
 data Field = Field { fields :: [Path]
                    , holes :: [Path]
@@ -25,5 +26,7 @@ data Keys = Keys { up :: Bool
 
 data World = World { field :: Field
                    , bot :: Bot
-                   , keys :: Keys}
+                   , keys :: Keys
+                   , decompositions :: [Graph]
+                   }
 
