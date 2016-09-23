@@ -37,8 +37,8 @@ markEvents :: Polygon -> [Float] -> [VertexEvent]
 markEvents p d = visitVertices p d mkEvent
  where
   mkEvent (pre, (v, a), post)
-    | (v < pre) && (v < post) = if a < 0 then InHull  else InHole
-    | (v > pre) && (v > post) = if a < 0 then OutHull else OutHole
+    | (v < pre) && (v <= post) = if a < 0 then InHull  else InHole
+    | (v > pre) && (v >= post) = if a < 0 then OutHull else OutHole
     | otherwise               = Middle
 
   visitVertices :: Polygon -> [Float] -> ((Float, (Float, Float), Float) -> a) -> [a]
@@ -151,7 +151,7 @@ replaceEdge :: Edge -> Edge -> Edges -> Edges
 replaceEdge old new es = map (\e -> if e == old then new else e) es
 
 between :: Float -> Edge -> Bool
-between d (TaggedPoint _ d1 _, TaggedPoint _ d2 _) = (d1 < d && d < d2) || (d1 > d && d > d2)
+between d (TaggedPoint _ d1 _, TaggedPoint _ d2 _) = (d1 <= d && d <= d2) || (d1 >= d && d >= d2)
 
 decompose :: Float -> Polygon -> Graph
 decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
@@ -176,14 +176,13 @@ decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
   hasTag _ _ = False
 
   walk :: Graph -> (VertexEvent, PointTag, Float) -> Graph
-  walk g (InHull, t, d) = create g t
-  walk g (InHole, t, d) = split g t d
-  walk g (OutHull, t, d) = close g t
+  walk g (InHull,  t, _) = create g t
+  walk g (Middle,  t, _) = update g t
+  walk g (OutHull, t, _) = close g t
+  walk g (InHole,  t, d) = split g t d
   walk g (OutHole, t, d) = join g t d
-  walk g (Middle, t, d) = update g t
 
-  create, update, close
-    :: Graph -> PointTag -> Graph
+  create, update, close :: Graph -> PointTag -> Graph
 
   --------------------------------------------------------------------------------------------------------------- create
   create g t = let pTag = crPolygonTag g + 1
