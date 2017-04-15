@@ -148,7 +148,7 @@ splitEdge d i (p1@(TaggedPoint _ d1 _), p2@(TaggedPoint _ d2 _)) =
      in ((p1, p), (p, p2))
 
 replaceEdge :: Edge -> Edge -> Edges -> Edges
-replaceEdge old new es = map (\e -> if e == old then new else e) es
+replaceEdge old new = map $ \e -> if e == old then new else e
 
 between :: Float -> Edge -> Bool
 between d (TaggedPoint _ d1 _, TaggedPoint _ d2 _) = (d1 <= d && d <= d2) || (d1 >= d && d >= d2)
