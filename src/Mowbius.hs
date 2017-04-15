@@ -2,6 +2,7 @@ module Mowbius where
 
 import Algebra.Clipper
 import Control.Arrow hiding (left, right)
+import Data.IORef
 import Data.List
 import Data.Ord (comparing)
 import Graphics.Gloss.Interface.IO.Game
@@ -15,18 +16,17 @@ import Mowbius.Planner
 import Mowbius.Types
 
 run :: IO ()
-run = wInit >>= \wInit' ->
+run = let windowSize = (800, 600) in do
+  wInit' <- wInit
+  windowSizeRef <- newIORef windowSize
   playIO (InWindow "uMow" windowSize (5, 5)) (greyN 0.2)  -- create gray window
-             60 -- fps
-             wInit' -- initial world state
-             (return . displayWorld) -- display function
-             handleEventIO -- event handler
-             advanceIO -- state update function
+         60 -- fps
+         wInit' -- initial world state
+         (displayWorldIO windowSizeRef) -- display function
+         (handleEventIO windowSizeRef)-- event handler
+         advanceIO -- state update function
 
 -- constants
-
-windowSize :: (Int, Int)
-windowSize = (800, 600)
 
 randomFloatsRsIO :: (Float, Float) -> IO [Float]
 randomFloatsRsIO range = getStdRandom $ split >>> first (randomRs range)
@@ -70,12 +70,13 @@ rotSpeed = 1
               
 -- functions
 
-handleEventIO :: Event -> World -> IO World
-handleEventIO (EventKey (SpecialKey KeyF1) Down _ _) w = pPrint (decompositions w) >> return w
-handleEventIO (EventKey (SpecialKey KeyEsc) Down _ _) w = error "ESC pressed."
-handleEventIO (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
-handleEventIO (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
-handleEventIO _ w = return w
+handleEventIO :: IORef (Int, Int) -> Event -> World -> IO World
+handleEventIO _ (EventKey (SpecialKey KeyF1) Down _ _) w = pPrint (decompositions w) >> return w
+handleEventIO _ (EventKey (SpecialKey KeyEsc) Down _ _) w = error "ESC pressed."
+handleEventIO _ (EventKey (SpecialKey k) Down _ _) w = return w { keys = enable k $ keys w }
+handleEventIO _ (EventKey (SpecialKey k) Up _ _) w = return w { keys = disable k $ keys w }
+handleEventIO wsr (EventResize ns) w = writeIORef wsr ns >> return w
+handleEventIO _ _ w = return w
 
 advanceIO :: Float -> World -> IO World
 advanceIO _ w@(World f b k g) = case (s, r) of
@@ -105,19 +106,22 @@ go t r b = b { pos = p, angle = r', path = take 200 $ p : path b}
 
 -- Display functions
 
-displayWorld :: World -> Picture
-displayWorld w@(World f b _ _) = autoScaled w $ pictures [ displayBot b
+displayWorldIO :: IORef (Int, Int) -> World -> IO Picture
+displayWorldIO wsr w = readIORef wsr >>= \ws -> return $ displayWorld ws w
+
+displayWorld :: (Int, Int) -> World -> Picture
+displayWorld ws w@(World f b _ _) = autoScaled ws w $ pictures [ displayBot b
                                                        --, displayField f
                                                        , displayVertexEvents w 
                                                        , displayDecomposition w 
                                                        ]
 
-autoScaled :: World -> Picture -> Picture
-autoScaled w = Translate tx ty . Scale s s 
+autoScaled :: (Int, Int) -> World -> Picture -> Picture
+autoScaled ws w = Translate tx ty . Scale s s 
  where
   s = 0.9 * minimum [sx, sy]
-  sx = ((fromInteger . toInteger . fst) windowSize) / width worldBounds
-  sy = ((fromInteger . toInteger . snd) windowSize) / height worldBounds
+  sx = ((fromInteger . toInteger . fst) ws) / width worldBounds
+  sy = ((fromInteger . toInteger . snd) ws) / height worldBounds
   worldBounds = getBounds w
   center (p, q) = (mulSV 0.5 (q - p)) + p  -- compute center between two points
   c = center $ mapT (mulSV s) worldBounds -- scale worldbounds and get center
