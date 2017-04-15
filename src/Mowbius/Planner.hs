@@ -6,6 +6,7 @@ import Data.List
 import Data.Maybe
 import Data.Monoid
 import Data.Ord
+import Debug.Trace
 import Graphics.Gloss.Data.Point
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
@@ -154,11 +155,25 @@ between :: Float -> Edge -> Bool
 between d (TaggedPoint _ d1 _, TaggedPoint _ d2 _) = (d1 <= d && d <= d2) || (d1 >= d && d >= d2)
 
 decompose :: Float -> Polygon -> Graph
-decompose angle p@(Polygon ps) = foldl walk (emptyGraph p ds) sortedPoints
+decompose angle p@(Polygon ps) = if hasDups (map thrd sortedPoints) then traceShow (sortedPoints) $ decomp else decomp
  where
+  decomp = foldl walk (emptyGraph p ds) sortedPoints
   ds = distances angle p
   events = markEvents p ds
-  sortedPoints = sortBy (comparing thrd) $ zip3 events tags ds
+  sortedPoints = movDups . sortBy (comparing thrd) $ zip3 events tags ds
+  movDups :: [(a, b, Float)] -> [(a, b, Float)]
+  movDups [] = []
+  movDups [x] = [x]
+  movDups ((xa, xb, x) : ((ya, yb, y): ys)) = 
+    let y' = y + 0.0001
+        in if x == y then ((xa, xb, x) : (ya, yb, y') : ys)
+                     else ((xa, xb, x) : (ya, yb, y ) : ys) 
+
+  hasDups :: [Float] -> Bool
+  hasDups [] = False
+  hasDups [x] = False
+  hasDups (x : (y : ys)) = (x == y) || (hasDups (y : ys))
+
   tags = map Original [0..]
   thrd (_, _, c) = c
 
