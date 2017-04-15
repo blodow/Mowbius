@@ -5,6 +5,7 @@ import Control.Arrow hiding (left, right)
 import Data.IORef
 import Data.List
 import Data.Ord (comparing)
+import Debug.Trace
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
@@ -210,8 +211,14 @@ mow f b = toPaths <$> clip ps bot'
   h = w / 3.0
 
 simplifyPaths :: [Path] -> [Path]
-simplifyPaths = map $ rdp 0.01 -- 1cm threshold
+simplifyPaths = map $ rdp 0.01 . preproc -- 1cm threshold
  where
+  preproc :: Path -> Path
+  preproc ps = trace (show (length ps) ++ " -> " ++ show (length after)) after
+    where after = map snd3 $ filter bigArea $ zip3 (leftsOf ps) ps (rightsOf ps)
+  snd3 (_, x, _) = x
+  bigArea ((p00, p01), (p10, p11), (p20, p21)) = abs ((p00 - p20) * (p11 - p01) - (p00 - p10) * (p21 - p01)) > 0.001
+
   -- Ramer-Douglas-Peucker split-and-merge algorithm
   rdp :: Float -> Path -> Path
   rdp e p | length p <= 2 = p
