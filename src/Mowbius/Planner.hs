@@ -231,7 +231,8 @@ decompose angle p@(Polygon ps) = if hasDups (map thrd sortedPoints) then traceSh
     cTag2 = crCreatedTag g + 2
     (new1, new2, old) = case catMaybes $ map betweenEdges $ grOpenCells g of
                           [(cell, r, l)] -> split' cell r l
-                          sthElse -> error ("Split:\n" ++ ppShow g ++ "\n\n" ++ ppShow sthElse)
+                          _ -> (Cell 0 [] [], Cell 0 [] [], Cell 0 [] [])
+                            -- TODO: was: sthElse -> error ("Split:\n" ++ ppShow g ++ "\n\n" ++ ppShow sthElse ++ "\n" ++ show pt')
 
     betweenEdges :: Cell -> Maybe (Cell, Edge, Edge)
     betweenEdges c = let rs = filter (between d) (ceRight c)
@@ -275,7 +276,8 @@ decompose angle p@(Polygon ps) = if hasDups (map thrd sortedPoints) then traceSh
                             ls = filter (inRightEdges g t) (grOpenCells g)
                          in case (rs, ls) of
                               ([r], [l]) -> join' r l
-                              sthElse -> error ("Join:\n" ++ ppShow g ++ "\n\n" ++ ppShow sthElse)
+                              _ -> (Cell 0 [] [], Cell 0 [] [], Cell 0 [] [])
+                              -- TODO: was: sthElse -> error ("Join:\n" ++ ppShow g ++ "\n\n" ++ ppShow sthElse)
 
     join' :: Cell -> Cell -> (Cell, Cell, Cell)
     join' r l = let edgeL = selectE $ ceLeft l
