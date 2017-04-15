@@ -139,11 +139,11 @@ displayVertexEvents w@(World f b _ _) = Pictures . map displayVertexEvents' $ fi
   displayVertexEvents' path = Pictures .  map draw $ zip (evs $ pathToPoly path) path
   evs p = eventsForDirection (-angle b) p
   draw :: (VertexEvent, Point) -> Picture
-  draw (InHull, (x, y)) = translate x y . Color green $ sText "Iu"
-  draw (InHole, (x, y)) = translate x y . Color white $ sText "Io"
-  draw (OutHull, (x, y)) = translate x y . Color red $ sText "Ou"
-  draw (OutHole, (x, y)) = translate x y . Color cyan $ sText "Oo"
-  draw (Middle, (x, y)) = translate x y . Color (greyN 0.9) $ sText "m"
+  --draw (InHull, (x, y)) = translate x y . Color green $ sText "Iu"
+  --draw (InHole, (x, y)) = translate x y . Color white $ sText "Io"
+  --draw (OutHull, (x, y)) = translate x y . Color red $ sText "Ou"
+  --draw (OutHole, (x, y)) = translate x y . Color cyan $ sText "Oo"
+  --draw (Middle, (x, y)) = translate x y . Color (greyN 0.9) $ sText "m"
   draw (_, _) = blank
 
 sText :: String -> Picture
@@ -156,7 +156,7 @@ displayDecomposition w@(World f b _ ds) = Pictures $ map draw ds
   draw g = Pictures $ polys (grNodes g) ++ tags (grNodes g) ++ edges
 
   tags :: [TaggedPolygon] -> [Picture]
-  tags = map (\tp -> uncurry translate (centroid $ tpyPoints tp) . Color yellow . sText . show $ tpyTag tp)
+  tags = const [] -- map (\tp -> uncurry translate (centroid $ tpyPoints tp) . Color yellow . sText . show $ tpyTag tp)
   centroid :: [Point] -> Point
   centroid [] = (0, 0)
   centroid ts = dividePt (sum ts) (genericLength ts)
