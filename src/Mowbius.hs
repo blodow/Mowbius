@@ -83,7 +83,7 @@ advanceIO _ w@(World f b k g) = case (s, r) of
  (0, 0) -> return w
  _ -> do
    f' <- mow f b
-   return w { field = f', bot = bot', decompositions = map decomp $ fields f }
+   return w { field = f', bot = bot', decompositions = map decomp $ fields f' }
  where
   bot' = go s r b
   decomp path = decompose (-angle bot') $ pathToPoly path
